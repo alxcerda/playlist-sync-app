@@ -1,4 +1,4 @@
 node_modules
 secrets.js
+spotify_secrets.js
 youtube_secrets.json
-client_secret.json

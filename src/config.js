@@ -1,4 +1,4 @@
-const secrets = require("./secrets.js");
+const secrets = require("./spotify_secrets.js");
 // in .gitignore
 
 exports.user = {
