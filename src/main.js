@@ -37,7 +37,7 @@ fs.readFile("youtube_secrets.json", function processClientSecrets(
     return;
   }
   // Authorize a client with the loaded credentials, then call the YouTube API to get songs in music playlist
-  authorize(JSON.parse(content), getPlaylist);
+  authorize(JSON.parse(content), getYoutubePlaylist);
 });
 
 function authorize(credentials, callback) {
@@ -114,7 +114,7 @@ function storeToken(token) {
 }
 
 // auth is an authorized OAuth2 client
-function getPlaylist(auth) {
+function getYoutubePlaylist(auth) {
   var service = google.youtube("v3");
   // Make api call to get playlists
   service.playlists.list(
@@ -144,7 +144,7 @@ function getPlaylist(auth) {
           console.log(
             `${configs.colours.green} "Music" playlist successfully retrieved for ${playlists[0].snippet.channelTitle} ${configs.colours.reset}`
           );
-          getPlaylistItems(service, auth, id);
+          getYoutubePlaylistItems(service, auth, id);
         } else {
           console.log(
             `${configs.colours.red} "Music" playlist could not be found ${configs.colours.reset}`
@@ -155,7 +155,7 @@ function getPlaylist(auth) {
   );
 }
 
-function getPlaylistItems(service, auth, id) {
+function getYoutubePlaylistItems(service, auth, id) {
   service.playlistItems.list(
     {
       auth: auth,
@@ -188,11 +188,11 @@ async function syncTracksToSpotify(items) {
       `${configs.colours.red} Song titles array could not be retrieved ${configs.colours.reset}`
     );
   } else {
-    searchForPlaylist(trackTitles);
+    searchForSpotifyPlaylist(trackTitles);
   }
 }
 
-async function searchForPlaylist(trackTitles) {
+async function searchForSpotifyPlaylist(trackTitles) {
   let id = await axios
     .get(
       `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
@@ -219,13 +219,13 @@ async function searchForPlaylist(trackTitles) {
       );
     });
   if (id) {
-    addToPlaylist(id, trackTitles);
+    addToSpotifyPlaylist(id, trackTitles);
   } else {
-    createPlaylist(trackTitles);
+    createSpotifyPlaylist(trackTitles);
   }
 }
 
-async function createPlaylist(trackTitles) {
+async function createSpotifyPlaylist(trackTitles) {
   let requestBody = {
     name: configs.user.spotifyPlaylistName,
     description: configs.user.spotifyPlaylistDesc,
@@ -254,14 +254,12 @@ async function createPlaylist(trackTitles) {
         `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Playlist failed to create :(${configs.colours.reset}`
       );
     });
-  console.log("TEST", id);
-  addToPlaylist(id, trackTitles);
+  addToSpotifyPlaylist(id, trackTitles);
 }
 
 async function getUris(trackTitles) {
   let trackUris = [];
   for (let title of trackTitles) {
-    console.log(title);
     let uri = await axios
       .get(
         `https://api.spotify.com/v1/search?query=${title}&type=track&offset=0&limit=20`,
@@ -283,15 +281,13 @@ async function getUris(trackTitles) {
           `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song :(${configs.colours.reset}`
         );
       });
-    console.log(uri);
     trackUris.push(uri);
   }
   return trackUris;
 }
 
-async function addToPlaylist(id, trackTitles) {
+async function addToSpotifyPlaylist(id, trackTitles) {
   let uris = await getUris(trackTitles);
-  console.log(uris);
   axios
     .post(
       `https://api.spotify.com/v1/playlists/${id}/tracks?uris=${uris.join(
