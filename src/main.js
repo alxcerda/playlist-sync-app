@@ -197,30 +197,12 @@ async function syncTracksToSpotify(items) {
       `${configs.colours.red} Song titles array could not be retrieved ${configs.colours.reset}`
     );
   } else {
-    // let trackTitlesStr = trackTitles.join(",");
-    // console.log(trackTitlesStr);
-    let id = await searchForPlaylist();
-
-    if (id) {
-      console.log(trackTitles);
-      let trackUris = [];
-      trackTitles.forEach(async title => {
-        let uri = await searchForTrack(title);
-        trackUris.push(uri);
-      });
-      console.log("URIS", trackUris);
-      console.log("URI", trackUris.join(","));
-      addToPlaylist(id, trackUris.join(","));
-    } else {
-      playlistId = await spotify.createPlaylist();
-      let songUri = await spotify.searchForTrack("breathe bou");
-      spotify.addToPlaylist(playlistId, songUri);
-    }
+    searchForPlaylist(trackTitles);
   }
 }
 
-function searchForPlaylist() {
-  return axios
+async function searchForPlaylist(trackTitles) {
+  let id = await axios
     .get(
       `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
       {
@@ -245,16 +227,21 @@ function searchForPlaylist() {
         `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for existing playlist:(${configs.colours.reset}`
       );
     });
+  if (id) {
+    addToPlaylist(id, trackTitles);
+  } else {
+    createPlaylist(trackTitles);
+  }
 }
 
-function createPlaylist() {
+async function createPlaylist(trackTitles) {
   let requestBody = {
     name: configs.user.spotifyPlaylistName,
     description: configs.user.spotifyPlaylistDesc,
     public: true
   };
 
-  return axios
+  let id = await axios
     .post(
       `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
       requestBody,
@@ -276,36 +263,49 @@ function createPlaylist() {
         `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Playlist failed to create :(${configs.colours.reset}`
       );
     });
+  console.log("TEST", id);
+  addToPlaylist(id, trackTitles);
 }
 
-function searchForTrack(info) {
-  return axios
-    .get(
-      `https://api.spotify.com/v1/search?query=${info}&type=track&offset=0&limit=20`,
-      {
-        headers: {
-          Authorization: `Bearer ${configs.user.spotifyToken}`,
-          "Content-Type": "application/json"
+async function getUris(trackTitles) {
+  let trackUris = [];
+  for (let title of trackTitles) {
+    console.log(title);
+    let uri = await axios
+      .get(
+        `https://api.spotify.com/v1/search?query=${title}&type=track&offset=0&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${configs.user.spotifyToken}`,
+            "Content-Type": "application/json"
+          }
         }
-      }
-    )
-    .then(function(res) {
-      console.log(
-        `${configs.colours.green}Song has successfully been searched for!"${configs.colours.reset}`
-      );
-      return res.data.tracks.items[0].uri;
-    })
-    .catch(function(err) {
-      console.log(
-        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song :(${configs.colours.reset}`
-      );
-    });
+      )
+      .then(function(res) {
+        console.log(
+          `${configs.colours.green}Song has successfully been searched for!"${configs.colours.reset}`
+        );
+        return res.data.tracks.items[0].uri;
+      })
+      .catch(function(err) {
+        console.log(
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song :(${configs.colours.reset}`
+        );
+      });
+    console.log(uri);
+    trackUris.push(uri);
+  }
+  return trackUris;
 }
 
-function addToPlaylist(playlistId, songUris) {
+async function addToPlaylist(id, trackTitles) {
+  let uris = await getUris(trackTitles);
+  console.log(uris);
   axios
     .post(
-      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?uris=${songUris}`,
+      `https://api.spotify.com/v1/playlists/${id}/tracks?uris=${uris.join(
+        ","
+      )}`,
       {},
       {
         headers: {
