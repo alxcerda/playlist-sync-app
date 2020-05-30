@@ -18,7 +18,7 @@ const spotify = require("./spotify-funcs");
 // DONE Get spotify uri
 // DONE Add song to playlist
 
-mainMethod();
+// mainMethod();
 
 async function mainMethod() {
   // Auth
