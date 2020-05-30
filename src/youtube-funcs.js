@@ -1,9 +1,5 @@
-// module.exports = {
-//   loginToYoutube: function() {},
-//   getLikedSongs: function() {}
-// };
-
 var fs = require("fs");
+const configs = require("./config.js");
 var readline = require("readline");
 var { google } = require("googleapis");
 var OAuth2 = google.auth.OAuth2;
@@ -19,7 +15,9 @@ var TOKEN_PATH = TOKEN_DIR + "youtube-nodejs-quickstart.json";
 // Load client secrets from a local file.
 fs.readFile("client_secret.json", function processClientSecrets(err, content) {
   if (err) {
-    console.log("Error loading client secret file: " + err);
+    console.log(
+      `${configs.colours.red}Status ${err.response.status}: ${err.response.data.error} Error loading client secret file :( ${configs.colours.reset}`
+    );
     return;
   }
   // Authorize a client with the loaded credentials, then call the YouTube API.
@@ -72,7 +70,9 @@ function getNewToken(oauth2Client, callback) {
     rl.close();
     oauth2Client.getToken(code, function(err, token) {
       if (err) {
-        console.log("Error while trying to retrieve access token", err);
+        console.log(
+          `${configs.colours.red} Status ${err.response.status} Error while trying to retrieve access token :( ${configs.colours.reset}`
+        );
         return;
       }
       oauth2Client.credentials = token;
