@@ -46,7 +46,7 @@ fs.readFile("youtube_secrets.json", function processClientSecrets(
     return;
   }
   // Authorize a client with the loaded credentials, then call the YouTube API to get songs in music playlist
-  authorize(JSON.parse(content), getSongs);
+  authorize(JSON.parse(content), getPlaylist);
 });
 
 function authorize(credentials, callback) {
@@ -92,7 +92,7 @@ function getNewToken(oauth2Client, callback) {
         if (err) {
           console.log("TOKEN", token);
           console.log(
-            `${configs.colours.red} Status ${err.response.status} Error while trying to retrieve access token :( ${configs.colours.reset}`
+            `${configs.colours.red} Status ${err.response.data.error.code} : ${err.response.data.error.message} - Error while trying to retrieve access token :( ${configs.colours.reset}`
           );
           return;
         }
@@ -123,10 +123,9 @@ function storeToken(token) {
 }
 
 // auth is an authorized OAuth2 client
-function getSongs(auth) {
+function getPlaylist(auth) {
   var service = google.youtube("v3");
-  console.log(auth.credentials.access_token);
-
+  // Make api call to get playlists
   service.playlists.list(
     {
       auth: auth,
@@ -136,27 +135,65 @@ function getSongs(auth) {
     function(err, response) {
       if (err) {
         console.log(
-          `${configs.colours.red} The API returned an error: ${configs.colours.reset}` +
-            err
+          `${configs.colours.red} Status ${err.response.data.error.code}: ${err.response.data.error.message} -  Playlists could not be retrieved ${configs.colours.reset}`
         );
         return;
       }
-      var channels = response.data.items;
-      if (channels.length == 0) {
+      var playlists = response.data.items;
+      if (playlists.length == 0) {
         console.log(
-          `${configs.colours.red} No channel found ${configs.colours.reset}`
+          `${configs.colours.red} No playlists found ${configs.colours.reset}`
         );
       } else {
-        // console.log(
-        //   ` ${configs.colours.magenta} This channel's ID is %s. Its title is '%s', and it has %s views.${configs.colours.reset} `,
-        //   channels[0].id,
-        //   channels[0].snippet.title,
-        //   channels[0].statistics.viewCount
-        // );
-        console.log(channels);
+        // Gets the first playlistId that has the title "Music"
+        let id = playlists.find(playlist => playlist.snippet.title == "Music")
+          .id;
+
+        if (id) {
+          console.log(
+            `${configs.colours.green} "Music" playlist successfully retrieved for ${playlists[0].snippet.channelTitle} ${configs.colours.reset}`
+          );
+          getPlaylistItems(service, auth, id);
+        } else {
+          console.log(
+            `${configs.colours.red} "Music" playlist could not be found ${configs.colours.reset}`
+          );
+        }
       }
     }
   );
+}
+
+function getPlaylistItems(service, auth, id) {
+  console.log(id);
+  service.playlistItems.list(
+    {
+      auth: auth,
+      part: "snippet,contentDetails",
+      playlistId: id,
+      mine: true
+    },
+    function(err, response) {
+      if (err) {
+        console.log(
+          `${configs.colours.red} Status ${err.response.data.error.code}: ${err.response.data.error.message} -  Playlist items could not be retrieved ${configs.colours.reset}`
+        );
+        return;
+      }
+      var items = response.data.items;
+
+      getSongTitles(items);
+    }
+  );
+}
+
+function getSongTitles(items) {
+  // Get array of song titles w/o special characters
+  let songTitles = [];
+  items.forEach(item =>
+    songTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""))
+  );
+  console.log(songTitles);
 }
 
 async function mainMethod() {

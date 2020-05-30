@@ -21,7 +21,7 @@ module.exports = {
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} Failed to search for song :(${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song :(${configs.colours.reset}`
         );
       });
   },
@@ -48,7 +48,7 @@ module.exports = {
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} Failed to search for existing playlist:(${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for existing playlist:(${configs.colours.reset}`
         );
       });
   },
@@ -78,7 +78,7 @@ module.exports = {
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} Playlist failed to create :(${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Playlist failed to create :(${configs.colours.reset}`
         );
       });
   },
@@ -102,7 +102,7 @@ module.exports = {
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} Failed to add song :(${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add song :(${configs.colours.reset}`
         );
       });
   }
