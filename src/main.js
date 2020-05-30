@@ -127,10 +127,10 @@ function getSongs(auth) {
   var service = google.youtube("v3");
   console.log(auth.credentials.access_token);
 
-  service.channels.list(
+  service.playlists.list(
     {
       auth: auth,
-      part: "snippet,contentDetails,statistics",
+      part: "snippet,contentDetails",
       mine: true
     },
     function(err, response) {
@@ -147,12 +147,13 @@ function getSongs(auth) {
           `${configs.colours.red} No channel found ${configs.colours.reset}`
         );
       } else {
-        console.log(
-          ` ${configs.colours.magenta} This channel's ID is %s. Its title is '%s', and it has %s views.${configs.colours.reset} `,
-          channels[0].id,
-          channels[0].snippet.title,
-          channels[0].statistics.viewCount
-        );
+        // console.log(
+        //   ` ${configs.colours.magenta} This channel's ID is %s. Its title is '%s', and it has %s views.${configs.colours.reset} `,
+        //   channels[0].id,
+        //   channels[0].snippet.title,
+        //   channels[0].statistics.viewCount
+        // );
+        console.log(channels);
       }
     }
   );
