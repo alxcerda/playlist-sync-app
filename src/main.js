@@ -14,18 +14,10 @@ const axios = require("axios");
 //    Generate an Oauth token here (1h expiry) and paste into same spotify_secrets file- https://developer.spotify.com/console/post-playlists/?user_id=aic205&body=%7B%22name%22%3A%22Test%22%2C%22description%22%3A%22hi%22%2C%22public%22%3Atrue%7D
 //  - For Youtube, see docs for how to generate client_secret.json (I have renamed to youtube_secrets) - download and add to src
 
-// Run node.main.js on command line
+// 4. Run node.main.js on command line
 // It will generate youtube auth token and then sync a "Music" playlist on your channel with a playlist you can name in config
 
 // DISCLAIMER: Uses code provided by Youtube Data API to generate token/get channel or playlist
-
-// Outline of program
-// DONE Login to youtube
-// Get likes
-// DONE Create playlist
-// DONE add to if already exists
-// DONE Get spotify uri
-// DONE Add song to playlist
 
 // If modifying these scopes, delete your previously saved credentials at ~/.credentials/youtube-nodejs-quickstart.json
 var SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"];
