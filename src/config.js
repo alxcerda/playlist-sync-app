@@ -15,5 +15,6 @@ exports.user = {
 exports.colours = {
   green: "\u001b[32;1m",
   red: "\u001b[31;1m",
+  magenta: "\u001b[35;1m",
   reset: "\u001b[0m"
 };

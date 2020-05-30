@@ -4,6 +4,7 @@ const configs = require("./config.js");
 var readline = require("readline");
 var { google } = require("googleapis");
 var OAuth2 = google.auth.OAuth2;
+const axios = require("axios");
 
 // Prerequisites
 // 1. node.js
@@ -73,28 +74,34 @@ function getNewToken(oauth2Client, callback) {
     access_type: "offline",
     scope: SCOPES
   });
-  console.log("Authorize this app by visiting this url: ", authUrl);
+  console.log(
+    `${configs.colours.magenta} Authorize this app by visiting this url: ${configs.colours.reset} `,
+    authUrl
+  );
   var rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
   // Copy the code from the url into the console
-  rl.question("Enter the code from that page here: ", function(code) {
-    rl.close();
-    oauth2Client.getToken(code, function(err, token) {
-      if (err) {
-        console.log("TOKEN", token);
-        console.log(
-          `${configs.colours.red} Status ${err.response.status} Error while trying to retrieve access token :( ${configs.colours.reset}`
-        );
-        return;
-      }
-      oauth2Client.credentials = token;
-      storeToken(token);
-      callback(oauth2Client);
-    });
-  });
+  rl.question(
+    `${configs.colours.magenta} Enter the code from that page here: ${configs.colours.reset}`,
+    function(code) {
+      rl.close();
+      oauth2Client.getToken(code, function(err, token) {
+        if (err) {
+          console.log("TOKEN", token);
+          console.log(
+            `${configs.colours.red} Status ${err.response.status} Error while trying to retrieve access token :( ${configs.colours.reset}`
+          );
+          return;
+        }
+        oauth2Client.credentials = token;
+        storeToken(token);
+        callback(oauth2Client);
+      });
+    }
+  );
 }
 
 // Store token to disk
@@ -108,31 +115,40 @@ function storeToken(token) {
   }
   fs.writeFile(TOKEN_PATH, JSON.stringify(token), err => {
     if (err) throw err;
-    console.log("Token stored to " + TOKEN_PATH);
+    console.log(
+      `${configs.colours.magenta} Token stored to ${configs.colours.reset}` +
+        TOKEN_PATH
+    );
   });
 }
 
 // auth is an authorized OAuth2 client
 function getSongs(auth) {
   var service = google.youtube("v3");
+  console.log(auth.credentials.access_token);
+
   service.channels.list(
     {
       auth: auth,
       part: "snippet,contentDetails,statistics",
-      forUsername: "GoogleDevelopers"
+      mine: true
     },
     function(err, response) {
       if (err) {
-        console.log("The API returned an error: " + err);
+        console.log(
+          `${configs.colours.red} The API returned an error: ${configs.colours.reset}` +
+            err
+        );
         return;
       }
       var channels = response.data.items;
       if (channels.length == 0) {
-        console.log("No channel found.");
+        console.log(
+          `${configs.colours.red} No channel found ${configs.colours.reset}`
+        );
       } else {
         console.log(
-          "This channel's ID is %s. Its title is '%s', and " +
-            "it has %s views.",
+          ` ${configs.colours.magenta} This channel's ID is %s. Its title is '%s', and it has %s views.${configs.colours.reset} `,
           channels[0].id,
           channels[0].snippet.title,
           channels[0].statistics.viewCount
