@@ -165,7 +165,6 @@ function getPlaylist(auth) {
 }
 
 function getPlaylistItems(service, auth, id) {
-  console.log(id);
   service.playlistItems.list(
     {
       auth: auth,
@@ -182,33 +181,148 @@ function getPlaylistItems(service, auth, id) {
       }
       var items = response.data.items;
 
-      getSongTitles(items);
+      syncTracksToSpotify(items);
     }
   );
 }
 
-function getSongTitles(items) {
-  // Get array of song titles w/o special characters
-  let songTitles = [];
+// Get array of song titles w/o special characters
+async function syncTracksToSpotify(items) {
+  let trackTitles = [];
   items.forEach(item =>
-    songTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""))
+    trackTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""))
   );
-  console.log(songTitles);
+  if (trackTitles.length == 0) {
+    console.log(
+      `${configs.colours.red} Song titles array could not be retrieved ${configs.colours.reset}`
+    );
+  } else {
+    // let trackTitlesStr = trackTitles.join(",");
+    // console.log(trackTitlesStr);
+    let id = await searchForPlaylist();
+
+    if (id) {
+      console.log(trackTitles);
+      let trackUris = [];
+      trackTitles.forEach(async title => {
+        let uri = await searchForTrack(title);
+        trackUris.push(uri);
+      });
+      console.log("URIS", trackUris);
+      console.log("URI", trackUris.join(","));
+      addToPlaylist(id, trackUris.join(","));
+    } else {
+      playlistId = await spotify.createPlaylist();
+      let songUri = await spotify.searchForTrack("breathe bou");
+      spotify.addToPlaylist(playlistId, songUri);
+    }
+  }
 }
 
-async function mainMethod() {
-  // Auth
-  // Get yt likes, song names
+function searchForPlaylist() {
+  return axios
+    .get(
+      `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
+      {
+        headers: {
+          Authorization: `Bearer ${configs.user.spotifyToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+    )
+    .then(function(res) {
+      console.log(
+        `${configs.colours.green}Playlist has successfully been searched for"${configs.colours.reset}`
+      );
+      let items = res.data.items;
+      return (
+        items.find(item => item.name == configs.user.spotifyPlaylistName) &&
+        items.find(item => item.name == configs.user.spotifyPlaylistName).id
+      );
+    })
+    .catch(function(err) {
+      console.log(
+        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for existing playlist:(${configs.colours.reset}`
+      );
+    });
+}
 
-  let playlistId = await spotify.searchForPlaylist();
-  if (playlistId) {
-    let songUri = await spotify.searchForTrack("veteran bou");
-    console.log(playlistId);
-    console.log(songUri);
-    spotify.addToPlaylist(playlistId, songUri);
-  } else {
-    playlistId = await spotify.createPlaylist();
-    let songUri = await spotify.searchForTrack("breathe bou");
-    spotify.addToPlaylist(playlistId, songUri);
-  }
+function createPlaylist() {
+  let requestBody = {
+    name: configs.user.spotifyPlaylistName,
+    description: configs.user.spotifyPlaylistDesc,
+    public: true
+  };
+
+  return axios
+    .post(
+      `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
+      requestBody,
+      {
+        headers: {
+          Authorization: `Bearer ${configs.user.spotifyToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+    )
+    .then(function(res) {
+      console.log(
+        `${configs.colours.green}New playlist ${configs.user.spotifyPlaylistName} has successfully been created!${configs.colours.reset}`
+      );
+      return res.data.id;
+    })
+    .catch(function(err) {
+      console.log(
+        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Playlist failed to create :(${configs.colours.reset}`
+      );
+    });
+}
+
+function searchForTrack(info) {
+  return axios
+    .get(
+      `https://api.spotify.com/v1/search?query=${info}&type=track&offset=0&limit=20`,
+      {
+        headers: {
+          Authorization: `Bearer ${configs.user.spotifyToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+    )
+    .then(function(res) {
+      console.log(
+        `${configs.colours.green}Song has successfully been searched for!"${configs.colours.reset}`
+      );
+      return res.data.tracks.items[0].uri;
+    })
+    .catch(function(err) {
+      console.log(
+        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song :(${configs.colours.reset}`
+      );
+    });
+}
+
+function addToPlaylist(playlistId, songUris) {
+  axios
+    .post(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?uris=${songUris}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${configs.user.spotifyToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        }
+      }
+    )
+    .then(function(res) {
+      console.log(
+        `${configs.colours.green}Songs successfully added to ${configs.user.spotifyPlaylistName}"${configs.colours.reset}`
+      );
+    })
+    .catch(function(err) {
+      console.log(
+        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add song :(${configs.colours.reset}`
+      );
+    });
 }
