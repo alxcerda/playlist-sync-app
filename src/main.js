@@ -1,4 +1,3 @@
-const spotify = require("./spotify_funcs");
 var fs = require("fs");
 const configs = require("./config.js");
 var readline = require("readline");
