@@ -4,9 +4,9 @@ A program to sync a Youtube playlist called "Music" with one on Spotify called "
 
 ## Prerequisites
 
-Install node.js https://nodejs.org/en/download/
-Install homebrew https://brew.sh/
-Install yarn https://classic.yarnpkg.com/en/docs/install/#mac-stable
+- Install node.js https://nodejs.org/en/download/
+- Install homebrew https://brew.sh/
+- Install yarn https://classic.yarnpkg.com/en/docs/install/#mac-stable
 
 ## Getting Started
 
@@ -17,7 +17,7 @@ Install yarn https://classic.yarnpkg.com/en/docs/install/#mac-stable
 
 ## Authors
 
-- **Alex-Cerda** - (https://github.com/acerda96)
+- **Alex Cerda** - (https://github.com/acerda96)
 
 ## Acknowledgments
 
