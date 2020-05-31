@@ -1,4 +1,4 @@
-# Sync YouTube Music Playlist with Spotify Playlist
+# Sync YouTube with Spotify Playlists
 
 A program to sync a Youtube playlist called "Music" with one on Spotify called "Youtube Music Playlist". It will create a new playlist if one with this name doesn't exist. If it does exist, it will ensure items in "Music" match items in "Youtube Music Playlist".
 
