@@ -36,7 +36,7 @@ fs.readFile("youtube_secrets.json", function processClientSecrets(
     );
     return;
   }
-  // Authorize a client with the loaded credentials, then call the YouTube API to get songs in music playlist
+  // Authorize a client with the loaded credentials, then call the YouTube API to get items in music playlist
   authorize(JSON.parse(content), getYoutubePlaylist);
 });
 
@@ -113,6 +113,7 @@ function storeToken(token) {
 }
 
 // auth is an authorized OAuth2 client
+// Gets first matching youtube playlist called "Music"
 function getYoutubePlaylist(auth) {
   var service = google.youtube("v3");
   // Make api call to get playlists
@@ -135,7 +136,6 @@ function getYoutubePlaylist(auth) {
           `${configs.colours.red} No playlists found ${configs.colours.reset}`
         );
       } else {
-        // Gets the first playlistId that has the title "Music"
         let id = playlists.find(playlist => playlist.snippet.title == "Music")
           .id;
 
@@ -143,7 +143,7 @@ function getYoutubePlaylist(auth) {
           console.log(
             `${configs.colours.green} "Music" playlist successfully retrieved for ${playlists[0].snippet.channelTitle} ${configs.colours.reset}`
           );
-          getYoutubePlaylistItems(service, auth, id);
+          getYoutubeTrackTitles(service, auth, id);
         } else {
           console.log(
             `${configs.colours.red} "Music" playlist could not be found ${configs.colours.reset}`
@@ -154,7 +154,8 @@ function getYoutubePlaylist(auth) {
   );
 }
 
-function getYoutubePlaylistItems(service, auth, id) {
+// Gets videos in playlist
+function getYoutubeTrackTitles(service, auth, id) {
   service.playlistItems.list(
     {
       auth: auth,
@@ -170,21 +171,20 @@ function getYoutubePlaylistItems(service, auth, id) {
         return;
       }
       var items = response.data.items;
-
-      syncTracks(items);
+      let trackTitles = [];
+      items.forEach(item => {
+        trackTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""));
+      });
+      syncTracks(trackTitles);
     }
   );
 }
 
-// Get array of song titles w/o special characters
-async function syncTracks(items) {
-  let trackTitles = [];
-  items.forEach(item => {
-    trackTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""));
-  });
+// Get array of track titles w/o special characters
+async function syncTracks(trackTitles) {
   if (trackTitles.length == 0) {
     console.log(
-      `${configs.colours.red} Song titles array could not be retrieved ${configs.colours.reset}`
+      `${configs.colours.red} Track titles array could not be retrieved ${configs.colours.reset}`
     );
   } else {
     searchForSpotifyPlaylist(trackTitles);
@@ -300,13 +300,13 @@ async function getUris(trackTitles) {
       )
       .then(function(res) {
         console.log(
-          `${configs.colours.green}Song has successfully been searched for${configs.colours.reset}`
+          `${configs.colours.green}Track has successfully been searched for${configs.colours.reset}`
         );
         return res.data.tracks.items[0].uri;
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for song ${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for track ${configs.colours.reset}`
         );
       });
     trackUris.push(uri);
@@ -344,7 +344,7 @@ async function addToSpotifyPlaylist(playlistObj, trackTitles) {
       })
       .catch(function(err) {
         console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add song ${configs.colours.reset}`
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add track ${configs.colours.reset}`
         );
       });
   } else {
