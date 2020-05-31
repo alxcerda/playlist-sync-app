@@ -5,19 +5,6 @@ var { google } = require("googleapis");
 var OAuth2 = google.auth.OAuth2;
 const axios = require("axios");
 
-// Prerequisites
-// 1. node.js
-// 2. yarn
-// 3. Must have registered app with both Spotify and Youtube, get client ID's and SECRETS from there (see docs on how to do this).
-//  - For Spotify, paste client_id and server_id in a spotify_secrets file to import into config
-//    Generate an Oauth token here (1h expiry) and paste into same spotify_secrets file- https://developer.spotify.com/console/post-playlists/?user_id=aic205&body=%7B%22name%22%3A%22Test%22%2C%22description%22%3A%22hi%22%2C%22public%22%3Atrue%7D
-//  - For Youtube, see docs for how to generate client_secret.json (I have renamed to youtube_secrets) - download and add to src
-
-// 4. Run node.main.js on command line
-// It will generate youtube auth token and then sync a "Music" playlist on your channel with a playlist you can name in config
-
-// DISCLAIMER: Uses code provided by Youtube Data API to generate token/get channel or playlist
-
 // If modifying these scopes, delete your previously saved credentials at ~/.credentials/youtube-nodejs-quickstart.json
 var SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"];
 var TOKEN_DIR =
