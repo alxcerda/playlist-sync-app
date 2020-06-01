@@ -260,7 +260,7 @@ async function addToPlaylist(id, trackTitles) {
           }
         }
       )
-      .then(function(res) {
+      .then(function() {
         console.log(
           `${configs.colours.green}Tracks successfully added to ${configs.user.spotifyPlaylistName}"${configs.colours.reset}`
         );
