@@ -24,7 +24,7 @@ fs.readFile("youtube_secrets.json", function processClientSecrets(
     return;
   }
   // Authorize a client with the loaded credentials, then call the YouTube API to get items in music playlist
-  authorize(JSON.parse(content), getYoutubePlaylist);
+  authorize(JSON.parse(content), fetchPlaylist);
 });
 
 function authorize(credentials, callback) {
@@ -100,10 +100,9 @@ function storeToken(token) {
 }
 
 // auth is an authorized OAuth2 client
-// Gets first matching youtube playlist called "Music"
-function getYoutubePlaylist(auth) {
+// Gets first matching YouTube playlist called "Music"
+function fetchPlaylist(auth) {
   var service = google.youtube("v3");
-  // Make api call to get playlists
   service.playlists.list(
     {
       auth: auth,
@@ -130,7 +129,7 @@ function getYoutubePlaylist(auth) {
           console.log(
             `${configs.colours.green} "Music" playlist successfully retrieved for ${playlists[0].snippet.channelTitle} ${configs.colours.reset}`
           );
-          getYoutubeTrackTitles(service, auth, id);
+          getTrackTitles(service, auth, id);
         } else {
           console.log(
             `${configs.colours.red} "Music" playlist could not be found ${configs.colours.reset}`
@@ -141,8 +140,8 @@ function getYoutubePlaylist(auth) {
   );
 }
 
-// Gets videos in playlist
-function getYoutubeTrackTitles(service, auth, id) {
+// Gets track titles in YouTube playlist w/o special characters
+function getTrackTitles(service, auth, id) {
   service.playlistItems.list(
     {
       auth: auth,
@@ -162,24 +161,24 @@ function getYoutubeTrackTitles(service, auth, id) {
       items.forEach(item => {
         trackTitles.push(item.snippet.title.replace(/[^\w\s]/gi, ""));
       });
-      syncTracks(trackTitles);
+      beginSync(trackTitles);
     }
   );
 }
 
-// Get array of track titles w/o special characters
-async function syncTracks(trackTitles) {
+async function beginSync(trackTitles) {
   if (trackTitles.length == 0) {
     console.log(
       `${configs.colours.red} Track titles array could not be retrieved ${configs.colours.reset}`
     );
   } else {
-    searchForSpotifyPlaylist(trackTitles);
+    searchForPlaylist(trackTitles);
   }
 }
 
-async function searchForSpotifyPlaylist(trackTitles) {
-  let playlistObj = await axios
+// Search for Spotify playlist with name provided in config, if it exists add to it, else create it
+async function searchForPlaylist(trackTitles) {
+  let id = await axios
     .get(
       `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
       {
@@ -194,63 +193,28 @@ async function searchForSpotifyPlaylist(trackTitles) {
         `${configs.colours.green}Playlist has successfully been searched for${configs.colours.reset}`
       );
       let items = res.data.items;
-      let id;
-      let uris;
-      if (items.some(item => item.name == configs.user.spotifyPlaylistName)) {
-        id = items.find(item => item.name == configs.user.spotifyPlaylistName)
-          .id;
-        uris = await getExistingUris(id);
-      }
-      return {
-        id: id,
-        uris: uris
-      };
+      return (
+        items.some(item => item.name == configs.user.spotifyPlaylistName) &&
+        items.find(item => item.name == configs.user.spotifyPlaylistName).id
+      );
     })
     .catch(function(err) {
       console.log(
         `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to search for existing playlist${configs.colours.reset}`
       );
     });
-  if (playlistObj.id) {
-    addToSpotifyPlaylist(playlistObj, trackTitles);
-  } else {
-    createSpotifyPlaylist(trackTitles);
-  }
+  return id ? addToPlaylist(id, trackTitles) : createPlaylist(trackTitles);
 }
 
-function getExistingUris(id) {
-  return axios
-    .get(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
-      headers: {
-        Authorization: `Bearer ${configs.user.spotifyToken}`,
-        "Content-Type": "application/json"
-      }
-    })
-    .then(function(res) {
-      console.log(
-        `${configs.colours.green}Existing uris have been retrieved${configs.colours.reset}`
-      );
-      let items = res.data.items;
-      return items.map(item => item.track.uri);
-    })
-    .catch(function(err) {
-      console.log(
-        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to get existing uris in playlist ${configs.colours.reset}`
-      );
-    });
-}
-
-async function createSpotifyPlaylist(trackTitles) {
-  let requestBody = {
-    name: configs.user.spotifyPlaylistName,
-    description: configs.user.spotifyPlaylistDesc,
-    public: true
-  };
-
+async function createPlaylist(trackTitles) {
   let id = await axios
     .post(
       `https://api.spotify.com/v1/users/${configs.user.spotifyUserId}/playlists`,
-      requestBody,
+      {
+        name: configs.user.spotifyPlaylistName,
+        description: configs.user.spotifyPlaylistDesc,
+        public: true
+      },
       {
         headers: {
           Authorization: `Bearer ${configs.user.spotifyToken}`,
@@ -269,9 +233,51 @@ async function createSpotifyPlaylist(trackTitles) {
         `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Playlist failed to create ${configs.colours.reset}`
       );
     });
-  addToSpotifyPlaylist({ id: id, uris: [] }, trackTitles);
+  addToPlaylist(id, trackTitles);
 }
 
+// If the playlist has tracks in it, must do a sync not direct add so there are no duplicates
+async function addToPlaylist(id, trackTitles) {
+  let playlistContents = await getExistingUris(id);
+  let uris = await getUris(trackTitles);
+  if (playlistContents && playlistContents.length > 0) {
+    uris = uris.filter(uri => {
+      !playlistContents.includes(uri);
+    });
+  }
+  if (uris.length > 0) {
+    axios
+      .post(
+        `https://api.spotify.com/v1/playlists/${id}/tracks?uris=${uris.join(
+          ","
+        )}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${configs.user.spotifyToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          }
+        }
+      )
+      .then(function(res) {
+        console.log(
+          `${configs.colours.green}Tracks successfully added to ${configs.user.spotifyPlaylistName}"${configs.colours.reset}`
+        );
+      })
+      .catch(function(err) {
+        console.log(
+          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add track ${configs.colours.reset}`
+        );
+      });
+  } else {
+    console.log(
+      `${configs.colours.green}Tracks already in sync${configs.colours.reset}`
+    );
+  }
+}
+
+// Get uris to sync with playlist
 async function getUris(trackTitles) {
   let trackUris = [];
   for (let title of trackTitles) {
@@ -301,42 +307,25 @@ async function getUris(trackTitles) {
   return trackUris;
 }
 
-// If the playlist has tracks in it, must do a sync not direct add so there are no duplicates
-async function addToSpotifyPlaylist(playlistObj, trackTitles) {
-  let uris = await getUris(trackTitles);
-  if (playlistObj.uris && playlistObj.uris.length > 0) {
-    uris = uris.filter(uri => {
-      !playlistObj.uris.includes(uri);
+// Get uris already in playlist
+function getExistingUris(id) {
+  return axios
+    .get(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
+      headers: {
+        Authorization: `Bearer ${configs.user.spotifyToken}`,
+        "Content-Type": "application/json"
+      }
+    })
+    .then(function(res) {
+      console.log(
+        `${configs.colours.green}Existing uris have been retrieved${configs.colours.reset}`
+      );
+      let items = res.data.items;
+      return items.map(item => item.track.uri);
+    })
+    .catch(function(err) {
+      console.log(
+        `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to get existing uris in playlist ${configs.colours.reset}`
+      );
     });
-  }
-  if (uris.length > 0) {
-    axios
-      .post(
-        `https://api.spotify.com/v1/playlists/${
-          playlistObj.id
-        }/tracks?uris=${uris.join(",")}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${configs.user.spotifyToken}`,
-            "Content-Type": "application/json",
-            Accept: "application/json"
-          }
-        }
-      )
-      .then(function(res) {
-        console.log(
-          `${configs.colours.green}Tracks successfully added to ${configs.user.spotifyPlaylistName}"${configs.colours.reset}`
-        );
-      })
-      .catch(function(err) {
-        console.log(
-          `${configs.colours.red}Status ${err.response.data.error.status}: ${err.response.data.error.message} - Failed to add track ${configs.colours.reset}`
-        );
-      });
-  } else {
-    console.log(
-      `${configs.colours.green}Tracks already in sync${configs.colours.reset}`
-    );
-  }
 }
